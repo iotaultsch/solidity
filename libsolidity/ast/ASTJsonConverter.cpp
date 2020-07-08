@@ -23,6 +23,7 @@
 #include <libsolidity/ast/ASTJsonConverter.h>
 
 #include <libsolidity/ast/AST.h>
+#include <libsolidity/ast/TypeProvider.h>
 
 #include <libyul/AsmJsonConverter.h>
 #include <libyul/AsmData.h>
@@ -250,9 +251,12 @@ bool ASTJsonConverter::visit(ImportDirective const& _node)
 	std::vector<pair<string, Json::Value>> attributes = {
 		make_pair("file", _node.path()),
 		make_pair("absolutePath", _node.annotation().absolutePath),
-		make_pair(m_legacy ? "SourceUnit" : "sourceUnit", nodeId(*_node.annotation().sourceUnit)),
 		make_pair("scope", idOrNull(_node.scope()))
 	};
+
+	if (_node.annotation().sourceUnit)
+		attributes.emplace_back(m_legacy ? "SourceUnit" : "sourceUnit", nodeId(*_node.annotation().sourceUnit));
+
 	attributes.emplace_back("unitAlias", _node.name());
 	Json::Value symbolAliases(Json::arrayValue);
 	for (auto const& symbolAlias: _node.symbolAliases())
@@ -351,18 +355,11 @@ bool ASTJsonConverter::visit(OverrideSpecifier const& _node)
 
 bool ASTJsonConverter::visit(FunctionDefinition const& _node)
 {
-	Visibility visibility;
-	if (_node.isConstructor())
-		visibility = _node.annotation().contract->abstract() ? Visibility::Internal : Visibility::Public;
-	else
-		visibility = _node.visibility();
-
 	std::vector<pair<string, Json::Value>> attributes = {
 		make_pair("name", _node.name()),
 		make_pair("documentation", _node.documentation() ? toJson(*_node.documentation()) : Json::nullValue),
 		make_pair("kind", _node.isFree() ? "freeFunction" : TokenTraits::toString(_node.kind())),
 		make_pair("stateMutability", stateMutabilityToString(_node.stateMutability())),
-		make_pair("visibility", Declaration::visibilityToString(visibility)),
 		make_pair("virtual", _node.markedVirtual()),
 		make_pair("overrides", _node.overrides() ? toJson(*_node.overrides()) : Json::nullValue),
 		make_pair("parameters", toJson(_node.parameterList())),
@@ -373,7 +370,19 @@ bool ASTJsonConverter::visit(FunctionDefinition const& _node)
 		make_pair("scope", idOrNull(_node.scope()))
 	};
 
-	if (_node.isPartOfExternalInterface())
+
+	if (_node.annotation().contract)
+	{
+		Visibility visibility;
+		if (_node.isConstructor())
+			visibility = _node.annotation().contract->abstract() ? Visibility::Internal : Visibility::Public;
+		else
+			visibility = _node.visibility();
+
+		attributes.emplace_back("visibility", Declaration::visibilityToString(visibility));
+	}
+
+	if (_node.isPartOfExternalInterface() && TypeProvider::function(_node)->interfaceFunctionType())
 		attributes.emplace_back("functionSelector", _node.externalIdentifierHex());
 	if (!_node.annotation().baseFunctions.empty())
 		attributes.emplace_back(make_pair("baseFunctions", getContainerIds(_node.annotation().baseFunctions, true)));
@@ -726,15 +735,19 @@ bool ASTJsonConverter::visit(FunctionCall const& _node)
 		make_pair("tryCall", _node.annotation().tryCall)
 	};
 
-	FunctionCallKind nodeKind = *_node.annotation().kind;
-
-	if (m_legacy)
+	if (_node.annotation().kind.isSet())
 	{
-		attributes.emplace_back("isStructConstructorCall", nodeKind == FunctionCallKind::StructConstructorCall);
-		attributes.emplace_back("type_conversion", nodeKind == FunctionCallKind::TypeConversion);
+		FunctionCallKind nodeKind = *_node.annotation().kind;
+
+		if (m_legacy)
+		{
+			attributes.emplace_back("isStructConstructorCall", nodeKind == FunctionCallKind::StructConstructorCall);
+			attributes.emplace_back("type_conversion", nodeKind == FunctionCallKind::TypeConversion);
+		}
+		else
+			attributes.emplace_back("kind", functionCallKind(nodeKind));
 	}
-	else
-		attributes.emplace_back("kind", functionCallKind(nodeKind));
+
 	appendExpressionAttributes(attributes, _node.annotation());
 	setJsonNode(_node, "FunctionCall", std::move(attributes));
 	return false;
