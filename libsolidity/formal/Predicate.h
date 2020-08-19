@@ -81,6 +81,10 @@ public:
 	/// with _args.
 	std::string formatSummaryCall(std::vector<std::string> const& _args) const;
 
+	/// @returns the values of the state variables from _args at the point
+	/// where this summary was reached.
+	std::vector<std::string> summaryStateValues(std::vector<std::string> const& _args) const;
+
 private:
 	Predicate(
 		smtutil::SortPointer _sort,
