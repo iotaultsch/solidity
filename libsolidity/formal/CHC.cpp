@@ -978,13 +978,11 @@ smtutil::Expression CHC::summary(FunctionDefinition const& _function)
 
 Predicate const* CHC::createBlock(ASTNode const* _node, string const& _prefix)
 {
-	auto block = createSymbolicBlock(sort(_node),
-		"block_" +
-			uniquePrefix() +
-			"_" +
-			_prefix +
-			predicateName(_node),
-		_node);
+	auto block = createSymbolicBlock(
+		sort(_node),
+		"block_" + uniquePrefix() + "_" + _prefix + predicateName(_node),
+		_node
+	);
 
 	solAssert(m_currentFunction, "");
 	return block;
@@ -992,12 +990,11 @@ Predicate const* CHC::createBlock(ASTNode const* _node, string const& _prefix)
 
 Predicate const* CHC::createSummaryBlock(FunctionDefinition const& _function, ContractDefinition const& _contract)
 {
-	auto block = createSymbolicBlock(summarySort(_function, _contract),
-		"summary_" +
-			uniquePrefix() +
-			"_" +
-			predicateName(&_function, &_contract),
-		&_function);
+	auto block = createSymbolicBlock(
+		summarySort(_function, _contract),
+		"summary_" + uniquePrefix() + "_" + predicateName(&_function, &_contract),
+		&_function
+	);
 
 	return block;
 }

@@ -57,7 +57,7 @@ Predicate::Predicate(
 {
 }
 
-Predicate const* Predicate::predicate(std::string const& _name)
+Predicate const* Predicate::predicate(string const& _name)
 {
 	return &m_predicates.at(_name);
 }
@@ -67,7 +67,7 @@ void Predicate::reset()
 	m_predicates.clear();
 }
 
-smtutil::Expression Predicate::operator()(std::vector<smtutil::Expression> const& _args) const
+smtutil::Expression Predicate::operator()(vector<smtutil::Expression> const& _args) const
 {
 	return m_predicate(_args);
 }

@@ -43,8 +43,10 @@ public:
 		ASTNode const* _node = nullptr
 	);
 
+	/// @returns the Predicate associated with _name.
 	static Predicate const* predicate(std::string const& _name);
 
+	/// Resets all the allocated predicates.
 	static void reset();
 
 	/// @returns a function application of the predicate over _args.
