@@ -602,7 +602,7 @@ bool AsmAnalyzer::validateInstructions(std::string const& _instructionIdentifier
 	if (builtin && builtin->instruction.has_value())
 		return validateInstructions(builtin->instruction.value(), _location);
 
-	if (EVMDialect::strictAssemblyForEVM(EVMVersion()).reservedIdentifier(YulString(_instructionIdentifier)))
+	if (m_dialect.reservedIdentifier(YulString(_instructionIdentifier)))
 	{
 		m_errorReporter.typeError(
 			5017_error,
