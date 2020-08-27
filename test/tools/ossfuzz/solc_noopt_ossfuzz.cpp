@@ -14,16 +14,41 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
-// SPDX-License-Identifier: GPL-3.0
 
 #include <test/tools/fuzzer_common.h>
+
+#include <test/tools/ossfuzz/libFuzzerMutator.h>
 
 #include <test/TestCaseReader.h>
 
 #include <sstream>
 
 using namespace solidity::frontend::test;
+using namespace solidity::test::fuzzer;
 using namespace std;
+
+extern "C" size_t LLVMFuzzerMutate(uint8_t* _data, size_t _size, size_t _maxSize);
+
+extern "C" size_t LLVMFuzzerCustomMutator(
+	uint8_t* _data,
+	size_t _size,
+	size_t _maxSize,
+	unsigned int _seed
+)
+{
+	if (_maxSize <= _size || _size == 0)
+		return LLVMFuzzerMutate(_data, _size, _maxSize);
+
+	std::cout << "In custom mutator" << std::endl;
+	try
+	{
+		return SolCustomMutator{_data, _size, _maxSize, _seed}.mutate();
+	}
+	catch (range_error const&)
+	{
+		return LLVMFuzzerMutate(_data, _size, _maxSize);
+	}
+}
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t const* _data, size_t _size)
 {

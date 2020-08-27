@@ -29,6 +29,8 @@ if (OSSFUZZ)
             ../../TestCaseReader.cpp
             SolidityLexer.cpp
             SolidityParser.cpp
+            SolidityMutator.cpp
+            libFuzzerMutator.cpp
     )
     target_compile_options(solc_opt_ossfuzz
             PUBLIC
@@ -44,6 +46,8 @@ if (OSSFUZZ)
             ../../TestCaseReader.cpp
             SolidityLexer.cpp
             SolidityParser.cpp
+            SolidityMutator.cpp
+            libFuzzerMutator.cpp
     )
     target_compile_options(solc_noopt_ossfuzz
             PUBLIC
