@@ -463,12 +463,16 @@ void SMTEncoder::endVisit(UnaryOperation const& _op)
 
 	createExpr(_op);
 
+	auto const* subExpr = &_op.subExpression();
+	if (auto const* tuple = dynamic_cast<TupleExpression const*>(&_op.subExpression()))
+		subExpr = innermostTuple(*tuple);
+
 	switch (_op.getOperator())
 	{
 	case Token::Not: // !
 	{
 		solAssert(smt::isBool(_op.annotation().type->category()), "");
-		defineExpr(_op, !expr(_op.subExpression()));
+		defineExpr(_op, !expr(*subExpr));
 		break;
 	}
 	case Token::Inc: // ++ (pre- or postfix)
@@ -476,8 +480,8 @@ void SMTEncoder::endVisit(UnaryOperation const& _op)
 	{
 		auto cat = _op.annotation().type->category();
 		solAssert(smt::isInteger(cat) || smt::isFixedPoint(cat), "");
-		solAssert(_op.subExpression().annotation().willBeWrittenTo, "");
-		if (auto identifier = dynamic_cast<Identifier const*>(&_op.subExpression()))
+		solAssert(subExpr->annotation().willBeWrittenTo, "");
+		if (auto identifier = dynamic_cast<Identifier const*>(subExpr))
 		{
 			auto decl = identifierToVariable(*identifier);
 			solAssert(decl, "");
@@ -486,12 +490,12 @@ void SMTEncoder::endVisit(UnaryOperation const& _op)
 			defineExpr(_op, _op.isPrefixOperation() ? newValue : innerValue);
 			assignment(*decl, newValue);
 		}
-		else if (dynamic_cast<IndexAccess const*>(&_op.subExpression()))
+		else if (dynamic_cast<IndexAccess const*>(subExpr))
 		{
-			auto innerValue = expr(_op.subExpression());
+			auto innerValue = expr(*subExpr);
 			auto newValue = _op.getOperator() == Token::Inc ? innerValue + 1 : innerValue - 1;
 			defineExpr(_op, _op.isPrefixOperation() ? newValue : innerValue);
-			arrayIndexAssignment(_op.subExpression(), newValue);
+			arrayIndexAssignment(*subExpr, newValue);
 		}
 		else
 			m_errorReporter.warning(
@@ -504,25 +508,24 @@ void SMTEncoder::endVisit(UnaryOperation const& _op)
 	}
 	case Token::Sub: // -
 	{
-		defineExpr(_op, 0 - expr(_op.subExpression()));
+		defineExpr(_op, 0 - expr(*subExpr));
 		break;
 	}
 	case Token::Delete:
 	{
-		auto const& subExpr = _op.subExpression();
-		if (auto decl = identifierToVariable(subExpr))
+		if (auto decl = identifierToVariable(*subExpr))
 		{
 			m_context.newValue(*decl);
 			m_context.setZeroValue(*decl);
 		}
 		else
 		{
-			solAssert(m_context.knownExpression(subExpr), "");
-			auto const& symbVar = m_context.expression(subExpr);
+			solAssert(m_context.knownExpression(*subExpr), "");
+			auto const& symbVar = m_context.expression(*subExpr);
 			symbVar->increaseIndex();
 			m_context.setZeroValue(*symbVar);
-			if (dynamic_cast<IndexAccess const*>(&_op.subExpression()))
-				arrayIndexAssignment(_op.subExpression(), symbVar->currentValue());
+			if (dynamic_cast<IndexAccess const*>(subExpr))
+				arrayIndexAssignment(*subExpr, symbVar->currentValue());
 			else
 				m_errorReporter.warning(
 					2683_error,
